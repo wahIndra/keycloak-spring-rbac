@@ -1,0 +1,35 @@
+server:
+  port: 8082
+  error:
+    # Never send internals to the client
+    include-message: never
+    include-stacktrace: never
+    include-binding-errors: never
+    include-exception: false
+
+spring:
+  application:
+    name: leads-api-java8
+
+app:
+  # Required environment variables: KEYCLOAK_ISSUER_URI, KEYCLOAK_AUDIENCE, KEYCLOAK_CLIENT_ID.
+  # The app refuses to start without them. For local runs use the "local" profile.
+  security:
+    # Must match the "iss" claim exactly (the public realm URL)
+    issuer-uri: ${KEYCLOAK_ISSUER_URI}
+    # Optional. Empty = built from issuer-uri. Set it if the API reaches Keycloak over an internal URL.
+    jwk-set-uri: ${KEYCLOAK_JWK_SET_URI:}
+    # Tokens must contain this value in "aud"
+    audience: ${KEYCLOAK_AUDIENCE}
+    # Roles are read from resource_access.<client-id>.roles
+    client-id: ${KEYCLOAK_CLIENT_ID}
+    include-realm-roles: false
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+  endpoint:
+    health:
+      show-details: never

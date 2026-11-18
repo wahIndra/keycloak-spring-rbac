@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:context="http://www.springframework.org/schema/context"
+       xmlns:security="http://www.springframework.org/schema/security"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xsi:schemaLocation="
+         http://www.springframework.org/schema/beans    https://www.springframework.org/schema/beans/spring-beans.xsd
+         http://www.springframework.org/schema/context  https://www.springframework.org/schema/context/spring-context.xsd
+         http://www.springframework.org/schema/security https://www.springframework.org/schema/security/spring-security.xsd">
+    <!-- XSD without a version number = always matches the installed Spring Security version -->
+
+    <context:property-placeholder location="classpath:security.properties"/>
+
+    <!-- 1. Token checks: signature (RS256), exp, iss, aud, typ -->
+    <bean id="jwtDecoder"
+          class="com.example.security.KeycloakJwtDecoderFactory"
+          factory-method="create">
+        <constructor-arg index="0" value="${keycloak.issuer-uri}"/>
+        <constructor-arg index="1" value="${keycloak.jwk-set-uri:}"/>
+        <constructor-arg index="2" value="${keycloak.audience}"/>
+    </bean>
+
+    <!-- 2. Turn Keycloak roles into ROLE_<UPPER_CASE> -->
+    <bean id="jwtAuthenticationConverter"
+          class="org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter">
+        <property name="jwtGrantedAuthoritiesConverter">
+            <bean class="com.example.security.KeycloakRoleConverter">
+                <constructor-arg index="0" value="${keycloak.client-id}"/>
+                <constructor-arg index="1" value="${keycloak.include-realm-roles:false}"/>
+            </bean>
+        </property>
+        <!-- Principal name stays "sub" (the default): it never changes, unlike a username -->
+    </bean>
+
+    <!-- 3. JSON responses for 401 and 403 -->
+    <bean id="jsonAuthEntryPoint" class="com.example.security.JsonAuthenticationEntryPoint"/>
+    <bean id="jsonAccessDenied"   class="com.example.security.JsonAccessDeniedHandler"/>
+
+    <!-- 4. Access rules -->
+    <security:http create-session="stateless" use-expressions="true"
+                   entry-point-ref="jsonAuthEntryPoint">
+        <!-- Token-only API: no cookies, so no CSRF risk -->
+        <security:csrf disabled="true"/>
+
+        <security:headers>
+            <security:content-security-policy policy-directives="default-src 'none'; frame-ancestors 'none'"/>
+        </security:headers>
+
+        <!-- Read top to bottom: the first matching rule wins -->
+        <security:intercept-url pattern="/health"      method="GET"  access="permitAll"/>
+        <security:intercept-url pattern="/order"       method="POST" access="hasRole('ORDERS_WRITE')"/>
+        <security:intercept-url pattern="/payment"     method="POST" access="hasRole('PAYMENTS_WRITE')"/>
+        <security:intercept-url pattern="/status/*"    method="GET"  access="hasAnyRole('ORDERS_WRITE','PAYMENTS_WRITE')"/>
+        <!-- MUST be last: anything not listed is blocked -->
+        <security:intercept-url pattern="/**"                        access="denyAll"/>
+
+        <security:oauth2-resource-server entry-point-ref="jsonAuthEntryPoint">
+            <security:jwt decoder-ref="jwtDecoder"
+                          jwt-authentication-converter-ref="jwtAuthenticationConverter"/>
+        </security:oauth2-resource-server>
+
+        <security:access-denied-handler ref="jsonAccessDenied"/>
+    </security:http>
+
+    <!-- Required by the XML config, even though JWT doesn't use it -->
+    <security:authentication-manager/>
+</beans>

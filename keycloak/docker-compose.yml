@@ -1,0 +1,34 @@
+# Local Keycloak for the samples. FOR LOCAL DEVELOPMENT ONLY.
+#
+#   docker compose up -d
+#   Admin console: http://localhost:8080
+#
+# The realm "myrealm" is imported on startup from realm-export.json.
+# Production needs a different setup: see "Production hardening" in docs/.
+
+services:
+  keycloak:
+    # Pin an exact version (and ideally the image digest) in real environments
+    image: quay.io/keycloak/keycloak:26.0
+    command: start-dev --import-realm
+    environment:
+      # Set your own values in a .env file next to this one (never commit it)
+      KC_BOOTSTRAP_ADMIN_USERNAME: ${KC_ADMIN_USER:-admin}
+      KC_BOOTSTRAP_ADMIN_PASSWORD: ${KC_ADMIN_PASSWORD:-change-me-local-only}
+      # Keeps "iss" stable: always http://localhost:8080/realms/myrealm
+      KC_HOSTNAME: http://localhost:8080
+      KC_HEALTH_ENABLED: "true"
+    ports:
+      # Bound to this machine only, not to your whole network
+      - "127.0.0.1:8080:8080"
+    volumes:
+      - ./realm-export.json:/opt/keycloak/data/import/realm-export.json:ro
+    healthcheck:
+      # The image has no curl, so the check talks HTTP over bash's /dev/tcp (management port 9000)
+      test: ["CMD-SHELL", "exec 3<>/dev/tcp/127.0.0.1/9000 && printf 'GET /health/ready HTTP/1.1\\r\\nHost: localhost\\r\\nConnection: close\\r\\n\\r\\n' >&3 && grep -q '\"UP\"' <&3"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 20s
+    security_opt:
+      - no-new-privileges:true

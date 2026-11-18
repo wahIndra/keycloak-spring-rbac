@@ -1,0 +1,62 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+# Least privilege: this workflow only needs to read the code
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: ${{ matrix.project }} (Java ${{ matrix.java }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - project: java8-spring-boot
+            java: "8"
+          - project: java8-spring-xml
+            java: "8"
+          - project: java17-21-spring-boot
+            java: "17"
+          - project: java17-21-spring-boot
+            java: "21"
+    defaults:
+      run:
+        working-directory: ${{ matrix.project }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: ${{ matrix.java }}
+          cache: maven
+          cache-dependency-path: ${{ matrix.project }}/pom.xml
+
+      - name: Build and test
+        run: mvn -B -ntp verify -Djava.version=${{ matrix.java == '8' && '1.8' || matrix.java }}
+
+  realm:
+    name: Validate realm and scripts
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: realm-export.json is valid JSON
+        run: jq empty keycloak/realm-export.json
+      - name: Shell scripts pass shellcheck
+        run: shellcheck keycloak/get-token.sh

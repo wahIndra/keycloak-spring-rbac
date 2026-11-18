@@ -1,0 +1,8 @@
+# Local development only: values for the Keycloak in ../keycloak/docker-compose.yml
+# Run with: mvn spring-boot:run -Dspring-boot.run.profiles=local
+app:
+  security:
+    issuer-uri: http://localhost:8080/realms/myrealm
+    audience: leads-api
+    client-id: leads-api
+    allowed-origins: http://localhost:3000

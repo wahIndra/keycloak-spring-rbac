@@ -1,0 +1,44 @@
+server:
+  port: 8081
+  error:
+    # Never send internals to the client
+    include-message: never
+    include-stacktrace: never
+    include-binding-errors: never
+    include-exception: false
+
+spring:
+  application:
+    name: leads-api
+  mvc:
+    # RFC 9457 error bodies (application/problem+json) for 400/404/405/...
+    problemdetails:
+      enabled: true
+  threads:
+    virtual:
+      enabled: true   # used on Java 21, ignored on Java 17
+
+app:
+  # Required environment variables: KEYCLOAK_ISSUER_URI, KEYCLOAK_AUDIENCE, KEYCLOAK_CLIENT_ID.
+  # The app refuses to start without them. For local runs use the "local" profile.
+  security:
+    # Must match the "iss" claim exactly (the public realm URL)
+    issuer-uri: ${KEYCLOAK_ISSUER_URI}
+    # Optional. Empty = built from issuer-uri. Set it if the API reaches Keycloak over an internal URL.
+    jwk-set-uri: ${KEYCLOAK_JWK_SET_URI:}
+    # Tokens must contain this value in "aud"
+    audience: ${KEYCLOAK_AUDIENCE}
+    # Roles are read from resource_access.<client-id>.roles
+    client-id: ${KEYCLOAK_CLIENT_ID}
+    include-realm-roles: false
+    # Browser origins allowed to call this API. Leave empty if no browser calls it.
+    allowed-origins: ${CORS_ALLOWED_ORIGINS:}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+  endpoint:
+    health:
+      show-details: never

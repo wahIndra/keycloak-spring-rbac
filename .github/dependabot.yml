@@ -1,0 +1,49 @@
+version: 2
+updates:
+  # Java 17/21 sample: take every update
+  - package-ecosystem: maven
+    directory: /java17-21-spring-boot
+    schedule:
+      interval: weekly
+    groups:
+      spring:
+        patterns: ["org.springframework*"]
+
+  # Java 8 samples: stay on the last versions that support Java 8
+  - package-ecosystem: maven
+    directory: /java8-spring-boot
+    schedule:
+      interval: weekly
+    ignore:
+      - dependency-name: "org.springframework.boot:*"
+        versions: [">=3.0.0"]
+      - dependency-name: "org.springframework.security:*"
+        versions: [">=6.0.0"]
+
+  - package-ecosystem: maven
+    directory: /java8-spring-xml
+    schedule:
+      interval: weekly
+    ignore:
+      - dependency-name: "org.springframework:*"
+        versions: [">=6.0.0"]
+      - dependency-name: "org.springframework.security:*"
+        versions: [">=6.0.0"]
+      - dependency-name: "org.hibernate.validator:*"
+        versions: [">=7.0.0"]
+      - dependency-name: "org.eclipse.jetty:*"
+        versions: [">=10.0.0"]
+      - dependency-name: "org.slf4j:*"
+        versions: [">=2.0.0"]
+      - dependency-name: "org.glassfish:jakarta.el"
+        versions: [">=4.0.0"]
+
+  - package-ecosystem: docker-compose
+    directory: /keycloak
+    schedule:
+      interval: weekly
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
