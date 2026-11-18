@@ -9,7 +9,7 @@
 services:
   keycloak:
     # Pin an exact version (and ideally the image digest) in real environments
-    image: quay.io/keycloak/keycloak:26.0
+    image: quay.io/keycloak/keycloak:26.8
     command: start-dev --import-realm
     environment:
       # Set your own values in a .env file next to this one (never commit it)
